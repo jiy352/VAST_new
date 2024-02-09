@@ -115,3 +115,58 @@ class MeshToVortexMesh(ModuleCSDL):
                 #                                             1, :, :] -
                 #                                     mesh[:, num_pts_chord -
                 #                                             2, :, :])
+
+if __name__=='__main__':
+    from vast.utils.generate_rectangular_mesh import generate_rectangular_mesh
+    from python_csdl_backend import Simulator
+    
+
+    # generate a rectangular mesh
+    num_nodes = 3
+    nx = 10
+    ny = 5
+    mesh = generate_rectangular_mesh(nx, ny, num_nodes)
+
+    model = csdl.Model()
+    model.create_input('wing', mesh) # create a csdl variable for the input mesh
+    parameters = {
+        'surface_names': ['wing'],
+        'surface_shapes': [(num_nodes, nx, ny, 3)],
+        'mesh_unit': 'm',
+        'delta_t': 0,
+        'problem_type': 'fixed_wake',
+        'compressible': False,
+        'Ma': None
+    }
+    m2vm = MeshToVortexMesh(**parameters) # mesh 2 vortex mesh
+    model.add(m2vm,'mesh_to_vortex_mesh')
+
+
+    # add the model to the simulator and run it
+    sim = Simulator(model)
+    sim.run()
+
+    # visualize the bound_vtx_coords
+    import pyvista as pv
+
+    bound_vtx_coords = sim['wing_bound_vtx_coords']
+    x = bound_vtx_coords[0, :, :, 0] # just take the first node
+    y = bound_vtx_coords[0, :, :, 1]
+    z = bound_vtx_coords[0, :, :, 2]
+
+    mesh_x = mesh[0, :, :, 0] # just take the first node
+    mesh_y = mesh[0, :, :, 1]
+    mesh_z = mesh[0, :, :, 2]
+
+    # create a structured grid
+    grid = pv.StructuredGrid(x, y, z)
+    mesh_grid = pv.StructuredGrid(mesh_x, mesh_y, mesh_z)
+    # plot and show grid only
+    plotter = pv.Plotter()
+    plotter.add_mesh(grid, color="blue", opacity=0.5, show_edges=True)
+    plotter.add_mesh(mesh_grid, color="grey", opacity=0.3, show_edges=True)
+    plotter.add_axes_at_origin(labels_off=True, line_width=5)
+    plotter.show()
+
+    
+    

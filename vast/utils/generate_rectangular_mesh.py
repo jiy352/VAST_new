@@ -1,4 +1,5 @@
 
+import numpy as np
 
 def generate_rectangular_mesh(nx, ny, num_nodes=None):
     if num_nodes is None:
@@ -13,3 +14,5 @@ def generate_rectangular_mesh(nx, ny, num_nodes=None):
             mesh[i, :, :, 1] = np.outer(np.ones(nx), np.arange(ny))
             mesh[i, :, :, 2] = 0.
     return mesh
+
+
