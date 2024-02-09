@@ -22,6 +22,8 @@ def setup_mesh_to_vortex_mesh():
     }
     return MeshToVortexMesh(**parameters)
 
+# pytest -m mytag -p no:warnings
+@pytest.mark.mytag
 def test_bound_mesh_value(setup_mesh_to_vortex_mesh):
     m2vm = setup_mesh_to_vortex_mesh
     model = csdl.Model()
