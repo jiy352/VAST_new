@@ -20,15 +20,15 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name='lsdo_project_template',
-    version=get_version('lsdo_project_template/__init__.py'),
-    author='Author name',
-    author_email='author@gmail.com',
+    name='vast',
+    version=get_version('vast/__init__.py'),
+    author='Jiayao Yan',
+    author_email='jiy352@ucsd.edu',
     license='LGPLv3+',
-    keywords='python project template repository package',
-    url='http://github.com/LSDOlab/lsdo_project_template',
-    download_url='http://pypi.python.org/pypi/lsdo_project_template',
-    description='A template repository/package for LSDOlab projects',
+    keywords='Vortex based Aerodyanmics Simulation Toolkit',
+    url='http://github.com/LSDOlab/VAST_new',
+    # download_url='http://pypi.python.org/pypi/lsdo_project_template',
+    description='Vortex based Aerodyanmics Simulation Toolkit',
     long_description=long_description,
     long_description_content_type='text/markdown',
     packages=find_packages(),
