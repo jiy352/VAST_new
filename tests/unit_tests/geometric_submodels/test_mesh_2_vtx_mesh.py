@@ -3,7 +3,7 @@ import pytest
 import csdl
 from python_csdl_backend import Simulator
 from vast.utils.generate_rectangular_mesh import generate_rectangular_mesh  # function to generate a rectangular mesh
-from vast.core.submodels.geometric_preprocessing.mesh_to_vortex_mesh import MeshToVortexMesh  # Adjust the import path according to your project structure
+from vast.core.submodels.geometric_preprocessing.mesh_to_vortex_mesh import MeshToVortexMesh  
 
 @pytest.fixture
 def setup_mesh_to_vortex_mesh():
@@ -22,8 +22,8 @@ def setup_mesh_to_vortex_mesh():
     }
     return MeshToVortexMesh(**parameters)
 
-# pytest -m mytag -p no:warnings
-@pytest.mark.mytag
+# pytest -m unit_test -p no:warnings
+@pytest.mark.unit_test
 def test_bound_mesh_value(setup_mesh_to_vortex_mesh):
     m2vm = setup_mesh_to_vortex_mesh
     model = csdl.Model()

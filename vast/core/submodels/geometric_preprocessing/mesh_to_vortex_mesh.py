@@ -2,7 +2,6 @@ import csdl
 import numpy as np
 from lsdo_modules.module_csdl.module_csdl import ModuleCSDL
 
-
 class MeshToVortexMesh(ModuleCSDL):
     """
     Convert a mesh coordianates for the lifting surfaces to a vortex mesh.

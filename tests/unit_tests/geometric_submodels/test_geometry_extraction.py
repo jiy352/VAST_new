@@ -26,8 +26,8 @@ def setup_mesh_to_vortex_mesh():
 
 
 
-# pytest -m mytag -p no:warnings
-@pytest.mark.mytag
+# pytest -m unit_test -p no:warnings
+@pytest.mark.unit_test
 def test_geometry_property_extraction(setup_mesh_to_vortex_mesh):
     geo_extraction = setup_mesh_to_vortex_mesh
     model = csdl.Model()
