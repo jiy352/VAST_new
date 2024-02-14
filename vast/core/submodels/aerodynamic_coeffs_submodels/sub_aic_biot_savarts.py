@@ -73,6 +73,9 @@ class SubAicBiotSavarts(csdl.Model):
             # # Compute induced velocities for panel sides
             aic_sub = self._compute_panel_induced_velocities(eval_pts, points, eval_pt_shape, eval_pt_name,vortex_coords_name, vortex_coords_shape, output_name)
 
+            # reshape aic sub to num_nodes, eval_pt_shapes[1]*eval_pt_shapes[2],vortex_coords_shapes[1]*vortex_coords_shapes[2] , 3
+            
+
             self.register_output(output_name, aic_sub)
 
 
