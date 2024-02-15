@@ -1,5 +1,5 @@
 import csdl
-from VAST.utils.custom_einsums import EinsumKijKijKi, EinsumLijkLikLij
+# from VAST.utils.custom_einsums import EinsumKijKijKi, EinsumLijkLikLij
 
 class Projection(csdl.Model):
     """
@@ -134,14 +134,16 @@ class Projection(csdl.Model):
                     new_shape=(num_nodes, normals.shape[1] * normals.shape[2],
                                3))
                 if len(input_vel_shape) == 3:
-                    velocity_projections = csdl.custom(
-                        input_vel,
-                        normals_reshaped,
-                        op=EinsumKijKijKi(in_name_1=input_vel_name,
-                                          in_name_2=normals_reshaped.name,
-                                          in_shape=input_vel.shape,
-                                          out_name=output_var_name))
-
+                    # velocity_projections = csdl.custom(
+                    #     input_vel,
+                    #     normals_reshaped,
+                    #     op=EinsumKijKijKi(in_name_1=input_vel_name,
+                    #                       in_name_2=normals_reshaped.name,
+                    #                       in_shape=input_vel.shape,
+                    #                       out_name=output_var_name))
+                    velocity_projections = csdl.einsum('kij,kij->ki',
+                                                       input_vel,
+                                                       normals_reshaped)
                     self.register_output(output_var_name, velocity_projections)
                 delta = normals_reshaped.shape[1]
                 normal_concatenated[:,
@@ -152,13 +154,16 @@ class Projection(csdl.Model):
             if len(input_vel_shape) == 4:
 
 
-                velocity_projections = csdl.custom(
-                    input_vel,
-                    normal_concatenated,
-                    op=EinsumLijkLikLij(in_name_1=input_vel_name,
-                                        in_name_2='normal_concatenated' + '_' +
-                                        output_var_name,
-                                        in_shape=input_vel.shape,
-                                        out_name=output_var_name))
+                # velocity_projections = csdl.custom(
+                #     input_vel,
+                #     normal_concatenated,
+                #     op=EinsumLijkLikLij(in_name_1=input_vel_name,
+                #                         in_name_2='normal_concatenated' + '_' +
+                #                         output_var_name,
+                #                         in_shape=input_vel.shape,
+                #                         out_name=output_var_name))
+                velocity_projections = csdl.einsum('lijk,lik->lij',
+                                                   input_vel,
+                                                   normal_concatenated)
 
                 self.register_output(output_var_name, velocity_projections)

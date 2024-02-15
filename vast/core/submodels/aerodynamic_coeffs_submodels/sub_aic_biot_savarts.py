@@ -41,7 +41,7 @@ class SubAicBiotSavarts(csdl.Model):
         self.parameters.declare('eps', default=5e-4)
 
         self.parameters.declare('circulation_names', default=None)
-        self.parameters.declare('symmetry',default=True)
+        self.parameters.declare('symmetry',default=False)
         # note this symmetry is only for the half wing case, where the wing is centered
         # at the y axis, and the x axis is the symmetry axis
 
@@ -49,9 +49,7 @@ class SubAicBiotSavarts(csdl.Model):
 
         vc = self.parameters['vc']
         eps = self.parameters['eps']
-        # circulation_names = self.parameters['circulation_names']
         symmetry = self.parameters['symmetry']
-        # print('symmetry is---------------------------------------------', symmetry)
 
         for eval_pt_name, vortex_coords_name, output_name, eval_pt_shape, vortex_coords_shape in zip(
                 self.parameters['eval_pt_names'],
@@ -73,10 +71,13 @@ class SubAicBiotSavarts(csdl.Model):
             # # Compute induced velocities for panel sides
             aic_sub = self._compute_panel_induced_velocities(eval_pts, points, eval_pt_shape, eval_pt_name,vortex_coords_name, vortex_coords_shape, output_name)
 
-            # reshape aic sub to num_nodes, eval_pt_shapes[1]*eval_pt_shapes[2],vortex_coords_shapes[1]*vortex_coords_shapes[2] , 3
+            # reshape aic sub to num_nodes, eval_pt_shapes[1]*eval_pt_shapes[2],(vortex_coords_shapes[1]-1)*(vortex_coords_shapes[2]-1) , 3
+            # print('the shape of aic_sub is', eval_pt_shapes , vortex_coords_shapes)
+            aic_sub_reshaped = csdl.reshape(aic_sub, 
+                            new_shape=(eval_pt_shape[0], eval_pt_shape[1]*eval_pt_shape[2], (vortex_coords_shape[1]-1)*(vortex_coords_shape[2]-1), 3))
             
 
-            self.register_output(output_name, aic_sub)
+            self.register_output(output_name, aic_sub_reshaped)
 
 
     def _define_panel_points(self, vortex_coords):
@@ -113,7 +114,8 @@ class SubAicBiotSavarts(csdl.Model):
         total_induced_velocity = sum((v_ab, v_bc, v_cd, v_da))
         # Apply symmetry transformation if needed
         if symmetry:
-            total_induced_velocity =  csdl.custom(total_induced_velocity, op = SymmetryFlip(in_name=total_induced_velocity.name, eval_pt_shape=eval_pt_shape, vortex_coords_shape=vortex_coords_shape, out_name=output_name))
+            total_induced_velocity =  csdl.custom(total_induced_velocity, op = SymmetryFlip(in_name=total_induced_velocity.name, 
+                                                                                            eval_pt_shape=eval_pt_shape, vortex_coords_shape=vortex_coords_shape, out_name=output_name+'_flattened'))
         return total_induced_velocity
 
 
@@ -184,10 +186,7 @@ class SubAicBiotSavarts(csdl.Model):
                 r1s = r_1_norm**2
                 r2s = r_2_norm**2
                 eps_s = core_size**2
-                # print('shapes in biot-savart law cross',csdl.cross(r_1, r_2, axis=2).shape)
-                # print('shapes in biot-savart law r1s',r1s.shape)
-                # print('shapes in biot-savart law dor_r1_r2',dor_r1_r2.shape)
-                # print('shapes in biot-savart law r_1_norm',r_1_norm.shape)
+
                 f1 = ( (r1s - dor_r1_r2)/((r1s + eps_s + 1e-10)**0.5) + (r2s - dor_r1_r2)/((r2s + eps_s + 1e-10) **0.5) )/(r1s*r2s - dor_r1_r2**2 + eps_s*(r1s + r2s - 2*r_1_norm*r_2_norm) + 1e-10)
                 f2 = one_over_den
                 v_induced_line = csdl.expand(f1,(f2.shape),'ij->ijk') * f2 
@@ -255,6 +254,7 @@ class SymmetryFlip(csdl.CustomExplicitOperation):
         self.declare_derivatives(self.parameters['out_name'], self.parameters['in_name'],rows=row_indices,cols=col_indices,val=np.ones(row_indices.size))
 
     def compute(self, inputs, outputs):
+        print('out name', self.parameters['out_name'])
         outputs[self.parameters['out_name']] = self.full_aic_func(inputs[self.parameters['in_name']]).reshape(1,-1,3)
 
     def __get_full_aic(self,half_aic):
@@ -329,7 +329,11 @@ if __name__ == "__main__":
                                vortex_coords_names=vortex_coords_names,
                                eval_pt_shapes=eval_pt_shapes,
                                vortex_coords_shapes=vortex_coords_shapes,
-                               output_names=output_names)
+                               output_names=output_names,
+                               symmetry=True,
+                               vc=True)
+    aic = model_1.declare_variable('aic', shape=(1, (nc-1)*(ns-1)*(nc-1)*(ns-1), 3))
+
 
     model_1.add(submodel,'submodel')
 

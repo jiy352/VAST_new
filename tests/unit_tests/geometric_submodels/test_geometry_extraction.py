@@ -3,7 +3,7 @@ import pytest
 import csdl
 from python_csdl_backend import Simulator
 from vast.utils.generate_rectangular_mesh import generate_rectangular_mesh  # function to generate a rectangular mesh
-from vast.core.submodels.geometric_preprocessing.geometric_property_extraction import GeometricPropertyExtraction  # Adjust the import path according to your project structure
+from vast.core.submodels.geometric_submodels.geometric_property_extraction import GeometricPropertyExtraction  # Adjust the import path according to your project structure
 
 
 
