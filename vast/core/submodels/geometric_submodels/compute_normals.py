@@ -14,7 +14,7 @@ class ComputeNormals(csdl.Model):
     ----------
     surfaces_to_eval_normals : list
         List of arrays defining the coordinates of the lifting surface to evaluate the normals.
-    normals_names : list
+    normal_names : list
         List of names for the normals to be computed.
     surfaces_to_eval_normal_shapes : list
         List of shapes corresponding to each surface in `surfaces_to_eval_normals`.
@@ -26,17 +26,17 @@ class ComputeNormals(csdl.Model):
     """
     def initialize(self):
         self.parameters.declare('surfaces_to_eval_normals', types=list)
-        self.parameters.declare('normals_names', types=list)
+        self.parameters.declare('normal_names', types=list)
 
         self.parameters.declare('surfaces_to_eval_normal_shapes', types=list)
 
     def define(self):
         surfaces = self.parameters['surfaces_to_eval_normals']
-        normals_names = self.parameters['normals_names']
+        normal_names = self.parameters['normal_names']
         shapes = self.parameters['surfaces_to_eval_normal_shapes']
 
         for i, surface_name in enumerate(surfaces):
-            normals_name = normals_names[i]
+            normals_name = normal_names[i]
             shape = shapes[i]
             self.compute_normals(surface_name, normals_name, shape)
 
@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     num_nodes = 3
     vortex_coords_names = ['v1', 'v2']
-    normals_names = ['n1', 'n2']
+    normal_names = ['n1', 'n2']
     vortex_coords_shapes = [(num_nodes, 2, 3, 3), (num_nodes, 3, 4, 3)]
 
     model_1 = csdl.Model()
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     v2 = model_1.create_input('v2', val=v2_val)
     model_1.add(ComputeNormals(
         surfaces_to_eval_normals=vortex_coords_names,
-        normals_names=normals_names,
+        normal_names=normal_names,
         surfaces_to_eval_normal_shapes=vortex_coords_shapes,
     ),
                 name='ComputeNormal')

@@ -254,7 +254,6 @@ class SymmetryFlip(csdl.CustomExplicitOperation):
         self.declare_derivatives(self.parameters['out_name'], self.parameters['in_name'],rows=row_indices,cols=col_indices,val=np.ones(row_indices.size))
 
     def compute(self, inputs, outputs):
-        print('out name', self.parameters['out_name'])
         outputs[self.parameters['out_name']] = self.full_aic_func(inputs[self.parameters['in_name']]).reshape(1,-1,3)
 
     def __get_full_aic(self,half_aic):

@@ -40,18 +40,18 @@ class GenerateFixedWake(csdl.Model):
         for i in range(len(surface_names)):
             surface_name = surface_names[i]
             surface_shape = surface_shapes[i]
-            bd_vtx_coords_shape = surface_shape
-            bd_vtx_coords_name = surface_name + '_bd_vtx_coords'
+            bound_vtx_coords_shape = surface_shape
+            bound_vtx_coords_name = surface_name + '_bound_vtx_coords'
 
             num_pts_chord = surface_shape[1]
             num_pts_span = surface_shape[2]
 
-            bd_vtx_coords = self.declare_variable(bd_vtx_coords_name,
-                                                  shape=bd_vtx_coords_shape)
+            bound_vtx_coords = self.declare_variable(bound_vtx_coords_name,
+                                                  shape=bound_vtx_coords_shape)
             if TE_idx == 'first':
-                TE = bd_vtx_coords[:, 0, :, :]
+                TE = bound_vtx_coords[:, 0, :, :]
             elif TE_idx == 'last':
-                TE = bd_vtx_coords[:, num_pts_chord - 1, :, :]
+                TE = bound_vtx_coords[:, num_pts_chord - 1, :, :]
 
             TE_reshaped = csdl.reshape(TE, (num_nodes, num_pts_span, 3))
             TE_reshaped_expand = csdl.expand(TE_reshaped, 
@@ -107,9 +107,9 @@ if __name__ == "__main__":
     f = model_1.create_input('frame_vel',
                              val=np.array([[-1, 0, -0.2], [-1, 0, 0.2]]))
 
-    wing_1_inputs = model_1.create_input('wing_1_bd_vtx_coords',
+    wing_1_inputs = model_1.create_input('wing_1_bound_vtx_coords',
                                          val=wing_1_mesh)
-    wing_2_inputs = model_1.create_input('wing_2_bd_vtx_coords',
+    wing_2_inputs = model_1.create_input('wing_2_bound_vtx_coords',
                                          val=wing_2_mesh)
 
     model_1.add(GenerateFixedWake(

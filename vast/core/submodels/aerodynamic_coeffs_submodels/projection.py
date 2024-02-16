@@ -105,6 +105,8 @@ class Projection(csdl.Model):
             # we need to concatenate the normal vectors
             # into a whole vec to project the assembled aic matrix
 
+            print('normal_shapes', normal_shapes)
+
             normal_concatenated_shape = (num_nodes, ) + (sum(
                 (i[1] * i[2]) for i in normal_shapes), ) + (3, )
 
@@ -141,9 +143,7 @@ class Projection(csdl.Model):
                     #                       in_name_2=normals_reshaped.name,
                     #                       in_shape=input_vel.shape,
                     #                       out_name=output_var_name))
-                    velocity_projections = csdl.einsum('kij,kij->ki',
-                                                       input_vel,
-                                                       normals_reshaped)
+                    velocity_projections = csdl.sum(input_vel * normals_reshaped, axes=(2,))
                     self.register_output(output_var_name, velocity_projections)
                 delta = normals_reshaped.shape[1]
                 normal_concatenated[:,
@@ -162,8 +162,12 @@ class Projection(csdl.Model):
                 #                         output_var_name,
                 #                         in_shape=input_vel.shape,
                 #                         out_name=output_var_name))
-                velocity_projections = csdl.einsum('lijk,lik->lij',
-                                                   input_vel,
-                                                   normal_concatenated)
+
+                print('input_vel shape', input_vel.shape)
+                print('normal_concatenated shape', normal_concatenated.shape)
+                velocity_projections = csdl.einsum(input_vel,
+                                                   normal_concatenated,
+                                                    subscripts='lijk,ljk->lij',)
+
 
                 self.register_output(output_var_name, velocity_projections)

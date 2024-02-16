@@ -25,17 +25,17 @@ def setup_normals_computation():
     surface_mesh_1 = generate_test_surface(nx_1, ny_1).reshape(1, nx_1, ny_1, 3)
     surface_meshes = [surface_mesh, surface_mesh_1]
     surface_names = ['test_surface', 'test_surface_1']
-    normals_names = ['test_normals', 'test_normals_1']
+    normal_names = ['test_normals', 'test_normals_1']
     parameters = {
         'surfaces_to_eval_normals': surface_names,
-        'normals_names': normals_names,
+        'normal_names': normal_names,
         'surfaces_to_eval_normal_shapes': [(1, nx, ny, 3), (1, nx_1, ny_1, 3),]
     }
-    return ComputeNormals(**parameters), surface_names, surface_meshes, normals_names
+    return ComputeNormals(**parameters), surface_names, surface_meshes, normal_names
 
 @pytest.mark.unit_test
 def test_compute_normals(setup_normals_computation):
-    compute_normals, surface_names, surface_meshes, normals_names = setup_normals_computation
+    compute_normals, surface_names, surface_meshes, normal_names = setup_normals_computation
 
     model = csdl.Model()
     for i in range(len(surface_names)):
@@ -51,7 +51,7 @@ def test_compute_normals(setup_normals_computation):
     # Verify the computed normals
     for i in range(len(surface_names)):
         surface_name = surface_names[i]
-        normals_name = normals_names[i]
+        normals_name = normal_names[i]
         surface_mesh = surface_meshes[i]
         normals = sim[normals_name]
 
