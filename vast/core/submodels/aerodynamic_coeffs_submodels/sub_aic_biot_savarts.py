@@ -58,11 +58,12 @@ class SubAicBiotSavarts(csdl.Model):
                 self.parameters['eval_pt_shapes'],
                 self.parameters['vortex_coords_shapes']):
 
-
             # declare_inputs
             eval_pts = self.declare_variable(eval_pt_name, shape=eval_pt_shape)
             vortex_coords = self.declare_variable(vortex_coords_name, shape=vortex_coords_shape)
 
+            self.print_var(eval_pts+0)
+            self.print_var(vortex_coords+0)
 
             # Compute corner points of vortex panels
             A, B, C, D = self._define_panel_points(vortex_coords)

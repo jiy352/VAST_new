@@ -38,12 +38,12 @@ class Projection(csdl.Model):
             # project aic, or any other velocity with shape (num_nodes, num_vel_eval, num_vel_induce, 3)
             output_shape = self.calculate_output_shape_4D(input_shapes, num_nodes)
 
-        if len(inputs) > 1:
-            # this if for projection of kinematic vel for multiple lifting surfaces
-            self.project_multiple(inputs, normals, output_name, input_shapes, normal_shapes, num_nodes, output_shape)
-        elif len(inputs) == 1:
+        if len(input_shapes[0]) == 3:
+            # this is for projection of kinematic vel for multiple lifting surfaces
+            self.project_velocities(inputs, normals, output_name, input_shapes, normal_shapes, num_nodes, output_shape)
+        elif  len(input_shapes[0]) == 4:
             # projection for the whole AIC matrix
-            self.project_single(inputs[0], normal_shapes, output_name, input_shapes[0], num_nodes)
+            self.project_aic(inputs[0], normal_shapes, output_name, input_shapes[0], num_nodes)
 
     def calculate_output_shape_3D(self, input_shapes, num_nodes):
         return (num_nodes, sum(shape[1] for shape in input_shapes))
@@ -51,7 +51,7 @@ class Projection(csdl.Model):
     def calculate_output_shape_4D(self, input_shapes, num_nodes):
         return (num_nodes, sum(shape[1] + shape[2] for shape in input_shapes))
 
-    def project_multiple(self, input_names, normal_names, output_name, input_shapes, normal_shapes, num_nodes, output_shape):
+    def project_velocities(self, input_names, normal_names, output_name, input_shapes, normal_shapes, num_nodes, output_shape):
         output_vel = self.create_output(output_name, shape=output_shape)
         start = 0
         for input_name, normal_name, input_shape, normal_shape in zip(input_names, normal_names, input_shapes, normal_shapes):
@@ -62,7 +62,7 @@ class Projection(csdl.Model):
                 self.raise_dimension_error(input_name, normal_name, output_name)
             start += normals_reshaped.shape[1]
 
-    def project_single(self, input_name, normal_shapes, output_name, input_shape, num_nodes):
+    def project_aic(self, input_name, normal_shapes, output_name, input_shape, num_nodes):
         normal_concatenated, start = self.concatenate_normals(normal_shapes, num_nodes, output_name)
         if len(input_shape) == 4:
             self.perform_projection_4D(input_name, normal_concatenated, output_name, input_shape)
@@ -83,8 +83,10 @@ class Projection(csdl.Model):
         input_vel = self.declare_variable(input_name, shape=input_shape)
         # velocity_projections = csdl.custom(input_vel, normal_concatenated, op=EinsumLijkLikLij(
         #     in_name_1=input_name, in_name_2='normal_concatenated' + '_' + output_name, in_shape=input_shape, out_name=output_name))
-        shape = (normal_concatenated.shape[0],normal_concatenated.shape[1], input_vel.shape[2], normal_concatenated.shape[2])
+        shape = (normal_concatenated.shape[0],input_vel.shape[1], normal_concatenated.shape[1], normal_concatenated.shape[2])
         normal_concatenated_expand = csdl.expand(normal_concatenated, shape=shape, indices='ljk->lijk')
+        print('normal_concatenated_expand', normal_concatenated_expand.shape)
+        print('input_vel', input_vel.shape)
         velocity_projections = csdl.sum(input_vel * normal_concatenated_expand, axes=(3,))
         self.register_output(output_name, velocity_projections)
 

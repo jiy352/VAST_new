@@ -20,7 +20,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name='vast',
+    name='vast_2024',
     version=get_version('vast/__init__.py'),
     author='Jiayao Yan',
     author_email='jiy352@ucsd.edu',

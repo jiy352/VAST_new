@@ -39,7 +39,7 @@ class GeometricPropertyExtraction(csdl.Model):
             bound_vtx_shape = surface_shape
             bound_vtx_coords = self.declare_variable(f'{surface_name}_bound_vtx_coords', shape=bound_vtx_shape)
             collocation_points = self.compute_collocation_points(bound_vtx_coords, bound_vtx_shape)
-            self.register_output(f'{surface_name}_collocation_points', collocation_points)
+            self.register_output(f'{surface_name}_collocation_pts', collocation_points)
 
             panel_areas = self.compute_panel_areas(bound_vtx_coords)
             self.register_output(f'{surface_name}_panel_areas', panel_areas)

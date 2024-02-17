@@ -9,16 +9,19 @@ import numpy as np
 
 import csdl
 from python_csdl_backend import Simulator
-from vast.utils.generate_rectangular_mesh import generate_rectangular_mesh
+# from vast.utils.generate_rectangular_mesh import generate_rectangular_mesh
 from vast.core.submodels.geometric_submodels.mesh_to_vortex_mesh import MeshToVortexMesh
 from vast.core.submodels.geometric_submodels.compute_normals import ComputeNormals
 from vast.core.submodels.geometric_submodels.geometric_property_extraction import GeometricPropertyExtraction
 from vast.core.submodels.aerodynamic_coeffs_submodels.sub_aic_biot_savarts import SubAicBiotSavarts
-from vast.core.submodels.aerodynamic_coeffs_submodels.projection import Projection
+
+from vast.core.submodels.aerodynamic_coeffs_submodels.projection_gpt import Projection
 from vast.core.submodels.wake_submodels.generate_fixed_wake import GenerateFixedWake
 
+from VAST.utils.generate_mesh import *
+
 # define mesh as the input to the model
-nc = 10
+nc = 3
 ns = 11
 num_nodes = 2
 surface_shapes = [(num_nodes, nc, ns, 3)]
@@ -26,16 +29,23 @@ surface_names = ['surface']
 n_wake_pts_chord=2
 
 # create a simple rectangular mesh
-surface_mesh = [generate_rectangular_mesh(nc, ns, num_nodes=2)]
+mesh_dict = {
+    "num_y": ns, "num_x": nc, "wing_type": "rect", "symmetry": False, "span": 10.0,
+    "chord": 1, "span_cos_sppacing": 1.0, "chord_cos_sacing": 1.0,
+}
+# Generate mesh of a rectangular wing
+mesh = generate_mesh(mesh_dict)
+surface_mesh = [np.einsum('i,jkl->ijkl', np.ones((num_nodes)), mesh)]
+# Here, the mesh is checked to be the same as ex_1vlm_simulation_rec_wing.py in VAST 0.1.0
 
 # define frame velocity
-angle_of_attack_degree = np.array([-5,5])  # deg
-v_inf = 10 # m/s
+angle_of_attack_degree = np.array([5, -5])  # deg
+v_inf = 248.136 # m/s
 
 angle_of_attack_rad = np.deg2rad(angle_of_attack_degree)
 frame_vel_numpy = np.zeros((num_nodes, 3))
-frame_vel_numpy[:, 0] = v_inf * np.cos(angle_of_attack_rad)
-frame_vel_numpy[:, 2] = v_inf * np.sin(angle_of_attack_rad)
+frame_vel_numpy[:, 0] = -v_inf * np.cos(angle_of_attack_rad)
+frame_vel_numpy[:, 2] = -v_inf * np.sin(angle_of_attack_rad)
 
 
 # create a model
@@ -96,7 +106,7 @@ projection = Projection(
     input_var_shapes=[(num_nodes, (nc-1)* (ns-1), 3)],
     normal_shapes=[(num_nodes, nc-1, ns-1, 3)])
 
-model.add(projection, 'Projection')
+model.add(projection, 'Projection_rhs')
 
 
 # compute aic using the biot savarts law
@@ -107,10 +117,12 @@ aic_model = SubAicBiotSavarts(eval_pt_names=collocation_pts_names,
                         eval_pt_shapes=input_var_shapes,
                         vortex_coords_names=vortex_coords_names,
                         vortex_coords_shapes=surface_shapes,
+                        vc=True,
                         output_names=['aic'])
 
 
 model.add(aic_model, 'SubAicBiotSavarts')
+
 aic_shapes = [(num_nodes, (nc-1)* (ns-1), (nc-1)* (ns-1), 3)]
 
 # project the aic to the normal direction
@@ -121,12 +133,15 @@ aic_projected_model = Projection(
     input_var_shapes=aic_shapes,
     normal_shapes=[(num_nodes, nc-1, ns-1, 3)])
 model.add(aic_projected_model, 'ProjectionAic')
+
+# Here aic_projection is verfied against the example in VAST 0.1.0
+
 # generate the wake for the wake induced velocity
 wake_model = GenerateFixedWake(
     surface_names=surface_names,
     surface_shapes=surface_shapes,
     n_wake_pts_chord = n_wake_pts_chord,
-    delta_t = 2.,
+    delta_t = 100.,
 )
 
 model.add(wake_model, 'GenerateFixedWake')
@@ -140,7 +155,7 @@ wake_aic_model = SubAicBiotSavarts(eval_pt_names=collocation_pts_names,
                         vortex_coords_names=wake_coords_names,
                         vortex_coords_shapes=wake_coords_shapes,
                         output_names=['wake_aic'])
-
+print('input_var_shapes', input_var_shapes) 
 model.add(wake_aic_model, 'WakeSubAicBiotSavarts')
 
 # get LHS A matrix
@@ -186,20 +201,23 @@ model.register_output('MTX', MTX)
 rhs = model.declare_variable('rhs', shape=(num_nodes, (nc-1)* (ns-1)))
 from csdl.solvers.linear.direct import DirectSolver
 
-# circulation_strength = model.create_output('circulation_strength', shape=(num_nodes, (nc-1)* (ns-1)))
+circulation_strength = model.create_output('circulation_strength', shape=(num_nodes, (nc-1)* (ns-1)))
 
-# for i in range(num_nodes):
-#     A = csdl.reshape(MTX[i,:,:], ((nc-1)* (ns-1), (nc-1)* (ns-1)))
-#     rhs_i = csdl.reshape(rhs[i,:], ((nc-1)* (ns-1), ))
-#     # model.register_output('A', A)
-#     # model.register_output('rhs_i', rhs_i)
-#     sol = csdl.solve(A, -rhs_i, solver = DirectSolver())
+for i in range(num_nodes):
+    A = csdl.reshape(MTX[i,:,:], ((nc-1)* (ns-1), (nc-1)* (ns-1)))
+    rhs_i = csdl.reshape(rhs[i,:], ((nc-1)* (ns-1), ))
+    # model.register_output('A', A)
+    # model.register_output('rhs_i', rhs_i)
+    sol = csdl.solve(A, -rhs_i, solver = DirectSolver())
 
-#     circulation_strength[i,:] = csdl.reshape(sol, circulation_strength[i,:].shape)
+    circulation_strength[i,:] = csdl.reshape(sol, circulation_strength[i,:].shape)
 
 # run the model
 sim = Simulator(model, display_scripts=True)
 sim.run()
 
-
+# print('surface_bound_vtx_coords', sim['surface_bound_vtx_coords'])
+# print('wake_coords', sim['surface_wake_coords'])
+# print('wake_aic', sim['wake_aic'])
+# print('surface_normals', sim['surface_normals'])
 # sim['surface_bound_vtx_coords']
