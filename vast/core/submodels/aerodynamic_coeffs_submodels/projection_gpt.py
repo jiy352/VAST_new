@@ -83,10 +83,12 @@ class Projection(csdl.Model):
         input_vel = self.declare_variable(input_name, shape=input_shape)
         # velocity_projections = csdl.custom(input_vel, normal_concatenated, op=EinsumLijkLikLij(
         #     in_name_1=input_name, in_name_2='normal_concatenated' + '_' + output_name, in_shape=input_shape, out_name=output_name))
-        shape = (normal_concatenated.shape[0],input_vel.shape[1], normal_concatenated.shape[1], normal_concatenated.shape[2])
-        normal_concatenated_expand = csdl.expand(normal_concatenated, shape=shape, indices='ljk->lijk')
-        print('normal_concatenated_expand', normal_concatenated_expand.shape)
-        print('input_vel', input_vel.shape)
+        shape = (normal_concatenated.shape[0],normal_concatenated.shape[1], input_vel.shape[2], normal_concatenated.shape[2])
+        normal_concatenated_expand = csdl.expand(normal_concatenated, shape=shape, indices='ijk->ijlk')
+        # print('normal_concatenated', normal_concatenated.shape)
+        # print(normal_concatenated_expand.shape)
+        # print(input_vel.shape)
+
         velocity_projections = csdl.sum(input_vel * normal_concatenated_expand, axes=(3,))
         self.register_output(output_name, velocity_projections)
 

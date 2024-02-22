@@ -16,10 +16,12 @@ class kinematicVelocityModel(csdl.Model):
     """
     def initialize(self):
         self.parameters.declare('surface_names', types=list)
-        self.parameters.declare('surface_shapes', types=np.ndarray)
+        self.parameters.declare('surface_shapes', types=list)
 
     def define(self):
         num_nodes = self.parameters['surface_shapes'][0][0]
+        surface_names = self.parameters['surface_names']
+        surface_shapes = self.parameters['surface_shapes']
 
         frame_vel = self.declare_variable('frame_vel', shape=(num_nodes, 3))
         for surface_name, surface_shape in zip(surface_names, surface_shapes):

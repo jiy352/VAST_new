@@ -174,7 +174,7 @@ model.add(normal_models, 'ComputeNormalsWake')
 input_var_shapes = [(num_nodes, (nc-1)* (ns-1), (n_wake_pts_chord-1)* (ns-1), 3)]
 projection = Projection(
     input_var_names=['wake_aic'],
-    normal_names=normal_names_wake,
+    normal_names=normal_names,
     output_var_name='wake_rhs',
     input_var_shapes=input_var_shapes,
     normal_shapes=[(num_nodes, (n_wake_pts_chord-1), ns-1, 3)])
