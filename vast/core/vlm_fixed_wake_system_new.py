@@ -28,12 +28,30 @@ class VLMFixedWakeSystem(csdl.Model):
         self.parameters.declare('compressible', types=bool, default=False)
         self.parameters.declare('Ma', types=float, default=None)
 
-    def define(self):
+        self.parameters.declare('output_var_names', types=list, default=['forces', 'moments'])
 
+    def define(self):
+        # add compute vlm inputs: vortex mesh and frame velocity
+        self.add_compute_vlm_inputs()
+        # add pre-processing models: compute normals, geometric property extraction, and kinematic velocity
+        self.add_pre_processing_models()
+        # add the model to compute the RHS of the equation (projected kinematic velocity)
+        self.add_compute_rhs()
+        # add the model to compute the LHS A matrix, 
+        # - projected aerodynamic coefficients induced by the bound vortex, and the wake
+        self.add_compute_lhs_A()
+        # add the model to solve the linear system
+        self.add_solve_system()
+        # add the model to compute the forces and moments
+        # self.add_compute_forces_moments()
+
+    def add_compute_vlm_inputs(self):
         # add vortex mesh model to compute the vortex mesh from the input mesh
         self.add_mesh_to_vortex_mesh()
         # add frame_vel computation model given the aircraft states, or pass if frame_vel is given
         self.add_frame_vel_computation()
+
+    def add_pre_processing_models(self):
         # add compute normals model to compute the normal vectors of the input mesh
         self.add_compute_lifting_surface_normals()
         # add geometric property extraction model to compute the geometric properties of the input mesh
@@ -41,11 +59,14 @@ class VLMFixedWakeSystem(csdl.Model):
         # and the concatenated bound vector of all lifting surfaces
         self.add_geometric_property_extraction()
 
+    def add_compute_rhs(self): 
         # add the model to compute the kinematic velocity, this is the undisturbed velocity of the flow
         self.add_kinematic_velocity_model()
 
         # project the kinematic velocity to the get the rhs of the equation
         self.add_project_kinematic_velocity()
+
+    def add_compute_lhs_A(self):
 
         # add the model to compute the sub aerodynamic coefficients
         # and then, assemble the AIC from the sub aic
@@ -69,6 +90,7 @@ class VLMFixedWakeSystem(csdl.Model):
         # get the lhs A matrix
         self.add_compute_lhs_matrix()
 
+    def add_solve_system(self):
         # solve the linear system
         aic_shape = self.compute_bound_aic_shape()
         lhs_A = self.declare_variable('MTX', shape=(aic_shape[:-1]))
@@ -170,11 +192,6 @@ class VLMFixedWakeSystem(csdl.Model):
             normal_shapes=self.bound_normal_shapes)
         
         self.add(aic_projected_model, 'ProjectionLHSA')
-    
-    # def compute_lhs_A_shape(self):
-    #     # compute the shape of the lhs A matrix
-    #     surface_shapes = self.parameters['surface_shapes']
-    #     return (num_nodes, sum((surface_shape[1]-1) * (surface_shape[2]-1) for surface_shape in surface_shapes),sum((surface_shape[1]-1) * (surface_shape[2]-1) for surface_shape in surface_shapes))
 
     def compute_bound_aic_shape(self):
         # compute the shape of the lhs A matrix
