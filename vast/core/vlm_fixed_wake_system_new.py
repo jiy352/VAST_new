@@ -15,7 +15,9 @@ from VAST.utils.generate_mesh import *
 
 
 class VLMFixedWakeSystem(csdl.Model):
-
+    '''
+    VLM Fixed Wake System
+    '''
     def initialize(self):
         self.parameters.declare('surface_names', types=list)
         self.parameters.declare('surface_shapes', types=list)
@@ -44,7 +46,6 @@ class VLMFixedWakeSystem(csdl.Model):
         self.add_solve_system()
         # add the model to compute the forces and moments
         # self.add_compute_forces_moments()
-
     def add_compute_vlm_inputs(self):
         # add vortex mesh model to compute the vortex mesh from the input mesh
         self.add_mesh_to_vortex_mesh()
@@ -233,7 +234,6 @@ class VLMFixedWakeSystem(csdl.Model):
             output_names=['wake_aic'])
         self.add(wake_aic_model, 'WakeSubAicBiotSavarts')
 
-
     def add_project_wake_aic_to_normal_direction(self):
         # project the wake aic to the normal direction
         input_var_shapes = self.compute_wake_aic_shape()
@@ -255,7 +255,6 @@ class VLMFixedWakeSystem(csdl.Model):
         wake_aic_shape = [(num_nodes, (surface_shape[1]-1)* (surface_shape[2]-1), (n_wake_pts_chord-1)* (surface_shape[2]-1), 3) for surface_shape in surface_shapes]
         return wake_aic_shape
     
-
     def add_compute_lhs_matrix(self):
         # get the lhs A matrix
         wake_aic_projection_shape = self.compute_wake_aic_shape()[0][:-1]
