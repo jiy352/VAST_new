@@ -36,26 +36,33 @@ def setup_vlm_fixed_wake_simulation():
     mesh = generate_mesh(mesh_dict)
     surface_mesh = [np.einsum('i,jkl->ijkl', np.ones((num_nodes)), mesh)]
 
-    return VLMFixedWakeSystem(**parameters), surface_mesh
+    return parameters, surface_mesh
 
-def test_vlm_fixed_wake_simulation():
+def test_vlm_fixed_wake_simulation(setup_vlm_fixed_wake_simulation):
     # extract inputs
-    parameters = setup_vlm_fixed_wake_simulation.parameters
+    parameters, surface_mesh = setup_vlm_fixed_wake_simulation
+    
     surface_names = parameters['surface_names']
     surface_shapes = parameters['surface_shapes']
+    mesh_unit = parameters['mesh_unit']
+    problem_type = parameters['problem_type']
+    num_wake_pts = parameters['num_wake_pts']
+    delta_t = parameters['delta_t']
+    compressible = parameters['compressible']
+    Ma = parameters['Ma']
+
+    num_nodes = surface_shapes[0][0]
     
 
-    # Define mesh
+    # # Define mesh
+    # mesh_dict = {
+    #     "num_y": ns, "num_x": nc, "wing_type": "rect", "symmetry": False, "span": 10.0,
+    #     "chord": 1, "span_cos_sppacing": 1.0, "chord_cos_sacing": 1.0,
+    # }
 
-    
-    mesh_dict = {
-        "num_y": ns, "num_x": nc, "wing_type": "rect", "symmetry": False, "span": 10.0,
-        "chord": 1, "span_cos_sppacing": 1.0, "chord_cos_sacing": 1.0,
-    }
-
-    # Generate mesh
-    mesh = generate_mesh(mesh_dict)
-    surface_mesh = [np.einsum('i,jkl->ijkl', np.ones((num_nodes)), mesh)]
+    # # Generate mesh
+    # mesh = generate_mesh(mesh_dict)
+    # surface_mesh = [np.einsum('i,jkl->ijkl', np.ones((num_nodes)), mesh)]
     
     # Define frame velocity
     angle_of_attack_degree = np.array([5, -5])
@@ -70,7 +77,16 @@ def test_vlm_fixed_wake_simulation():
     for surface_name, surface_mesh in zip(surface_names, surface_mesh):
         model.create_input(surface_name, surface_mesh)
     frame_vel = model.create_input('frame_vel', frame_vel_numpy)
-    model.add(VLMFixedWakeSystem(surface_names=surface_names, surface_shapes=surface_shapes, mesh_unit='m', problem_type='fixed_wake', num_wake_pts=2, delta_t=100., compressible=False, Ma=None), 'VLMFixedWakeSystem')
+    model.add(VLMFixedWakeSystem(
+        surface_names=surface_names,
+        surface_shapes=surface_shapes,
+        mesh_unit=mesh_unit,
+        problem_type=problem_type,
+        num_wake_pts=num_wake_pts,
+        delta_t=delta_t,
+        compressible=compressible,
+        Ma=Ma
+    ), 'VLMFixedWakeSystem')
 
     # Run the simulation
     sim = Simulator(model)

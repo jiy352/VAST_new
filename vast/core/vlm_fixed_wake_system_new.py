@@ -121,6 +121,7 @@ class VLMFixedWakeSystem(csdl.Model):
 
     def add_compute_lifting_surface_normals(self):
         # add compute normals model to compute the normal vectors of the input mesh
+        surface_names = self.parameters['surface_names']
         self.bound_surface_normal_names = [surface_name + '_normals' for surface_name in surface_names]
         lifting_surface_normals_parameters = {
             'surfaces_to_eval_normals': self.parameters['surface_names'],
