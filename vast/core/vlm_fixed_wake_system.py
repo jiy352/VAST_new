@@ -131,6 +131,7 @@ class VLMFixedWakeSystem(csdl.Model):
     def add_project_kinematic_velocity(self):
         # project the kinematic velocity to the get the rhs of the equation
         surface_shapes = self.parameters['surface_shapes']
+        num_nodes = surface_shapes[0][0]
         self.bound_normal_shapes = [(num_nodes, surface_shape[1]-1, surface_shape[2]-1, 3) for surface_shape in surface_shapes]
         self.kinematic_vel_names = [surface_name + '_kinematic_vel' for surface_name in surface_names]
         self.kinematic_vel_shapes = [(num_nodes, (surface_shape[1]-1)* (surface_shape[2]-1), 3) for surface_shape in surface_shapes]

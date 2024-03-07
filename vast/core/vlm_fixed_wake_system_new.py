@@ -11,7 +11,6 @@ from vast.core.submodels.aerodynamic_coeffs_submodels.sub_aic_biot_savarts impor
 from vast.core.submodels.aerodynamic_coeffs_submodels.projection_gpt import Projection
 from vast.core.submodels.wake_submodels.generate_fixed_wake import GenerateFixedWake
 from vast.core.submodels.velocity_submodels.kinematic_velocity import kinematicVelocityModel
-from VAST.utils.generate_mesh import *
 
 
 class VLMFixedWakeSystem(csdl.Model):
@@ -71,12 +70,23 @@ class VLMFixedWakeSystem(csdl.Model):
 
         # add the model to compute the sub aerodynamic coefficients
         # and then, assemble the AIC from the sub aic
-        self.bound_vortex_coords_names = [surface_name + '_bound_vtx_coords' for surface_name in surface_names]
-        self.bound_collocation_pts_names = [surface_name + '_collocation_pts' for surface_name in surface_names]
-        self.bound_collocation_pts_shapes = [(num_nodes, surface_shape[1]-1, surface_shape[2]-1, 3) for surface_shape in surface_shapes]
+        surface_shapes = self.parameters['surface_shapes']
+        surface_names = self.parameters['surface_names']
+        num_nodes = surface_shapes[0][0]
+        self.bound_collocation_pts_names = [f"{name}_collocation_pts" for name in surface_names for _ in range(len(surface_names))]
+        self.bound_collocation_pts_shapes = [(num_nodes, nx - 1, ny - 1, 3) for num_nodes, nx, ny, _ in surface_shapes for _ in range(len(surface_names))]
+        
+        self.bound_vortex_coords_names = [surface_name + '_bound_vtx_coords' for surface_name in surface_names] * len(surface_names)
+        self.vortex_coords_shapes = surface_shapes * len(surface_names)
+        # self.op_aic_names is in the format of bound_surface_name + vortex_surface_name + '_aic_sub'
+        self.op_aic_names = [f"{bound_surface_name}_{vortex_surface_name}_aic_sub" for bound_surface_name in surface_names for vortex_surface_name in surface_names]
+
+        print('op_aic_names',self.op_aic_names)
+
         self.add_bound_bound_aerodynamic_coefficients()
 
-        
+
+
         # project the aic to the normal direction
         self.add_project_aic_to_normal_direction()
 
@@ -155,6 +165,8 @@ class VLMFixedWakeSystem(csdl.Model):
     def add_project_kinematic_velocity(self):
         # project the kinematic velocity to the get the rhs of the equation
         surface_shapes = self.parameters['surface_shapes']
+        surface_names = self.parameters['surface_names']
+        num_nodes = surface_shapes[0][0]
         self.bound_normal_shapes = [(num_nodes, surface_shape[1]-1, surface_shape[2]-1, 3) for surface_shape in surface_shapes]
         self.kinematic_vel_names = [surface_name + '_kinematic_vel' for surface_name in surface_names]
         self.kinematic_vel_shapes = [(num_nodes, (surface_shape[1]-1)* (surface_shape[2]-1), 3) for surface_shape in surface_shapes]
@@ -174,20 +186,58 @@ class VLMFixedWakeSystem(csdl.Model):
             eval_pt_names=self.bound_collocation_pts_names,
             eval_pt_shapes=self.bound_collocation_pts_shapes,
             vortex_coords_names=self.bound_vortex_coords_names,
-            vortex_coords_shapes=self.parameters['surface_shapes'],
+            vortex_coords_shapes=self.vortex_coords_shapes,
             vc=True,
-            output_names=['bound_aic'])
+            output_names=self.op_aic_names)
 
         self.add(aic_model, 'SubAicBiotSavarts')
 
         # TODO: assemble AIC form aic-sub
+        self.aic_name = 'bound_aic'
+        bound_aic_shape = self.compute_bound_aic_shape()
+        self.add_assemble_aic(aic_sub_names=self.op_aic_names, sub_aic_shapes=self.sub_aic_shapes)
+
+    def add_assemble_aic(self, aic_sub_names, sub_aic_shapes):
+
+        surface_names = self.parameters['surface_names']
+        
+        # create a csdl variable for the bound aic
+        bound_aic_shape = self.compute_bound_aic_shape()
+        bound_aic = self.create_output(self.aic_name, shape=bound_aic_shape)
+
+        start_i = 0
+        start_j = 0
+        print('sub_aic_shapes',sub_aic_shapes)
+
+        for i in range(len(surface_names)): 
+            for j in range(len(surface_names)):
+                # number of aic_sub_names
+                idx = i * len(surface_names) + j
+                aic_sub = self.declare_variable(aic_sub_names[idx], shape=sub_aic_shapes[idx])
+                delta_i = sub_aic_shapes[idx][1]
+                delta_j = sub_aic_shapes[idx][2]
+                print('i,j',i,j)
+                print('start_i,start_j',start_i,start_j)
+                print('delta_i,delta_j',delta_i,delta_j)
+                print('start_j',start_j)
+                print('delta_j',delta_j)
+                print('start_i+delta_i,start_j+delta_j',start_i+delta_i,start_j+delta_j)
+                bound_aic[:, start_i:start_i+delta_i, start_j:start_j+delta_j, :] = aic_sub
+                start_j += delta_j
+            start_i += delta_i
+            start_j = 0
+    
+            
+
+
+
 
     def add_project_aic_to_normal_direction(self):
         # project the aic to the normal direction
         bound_aic_shape = [self.compute_bound_aic_shape()]
         print('bound_aic_shape',bound_aic_shape)
         aic_projected_model = Projection(
-            input_var_names=['bound_aic'],
+            input_var_names=[self.aic_name] ,
             normal_names=self.bound_surface_normal_names,
             output_var_name='lhs_A_matrix',
             input_var_shapes=bound_aic_shape,
@@ -205,10 +255,21 @@ class VLMFixedWakeSystem(csdl.Model):
         #                       bd_coll_pts_shapes[i][2])
         #     aic_shape_col += ((bd_coll_pts_shapes[i][1]) *
         #                       (bd_coll_pts_shapes[i][2]))
+
+
+
         surface_shapes = self.parameters['surface_shapes']
         num_nodes = surface_shapes[0][0]
         compute_size = lambda shape: (shape[1]-1) * (shape[2]-1)
         total_size = sum(map(compute_size, surface_shapes))
+
+        self.sub_aic_shapes = []
+        for i in range(len(self.bound_collocation_pts_shapes)):
+            sub_aic_shapes_row = self.bound_collocation_pts_shapes[i][1] * self.bound_collocation_pts_shapes[i][2]
+
+            sub_aic_shapes_col = (self.vortex_coords_shapes[i][1]-1) * (self.vortex_coords_shapes[i][2]-1)
+            self.sub_aic_shapes.append((num_nodes, sub_aic_shapes_row, sub_aic_shapes_col, 3))
+
         return (num_nodes, total_size, total_size, 3)
     
     def add_generate_fixed_wake(self):
@@ -223,6 +284,10 @@ class VLMFixedWakeSystem(csdl.Model):
     
     def add_compute_wake_aic(self):
         # compute the shape of the wake aic
+        surface_names = self.parameters['surface_names']
+        surface_shapes = self.parameters['surface_shapes']
+        num_nodes = surface_shapes[0][0]
+
         surface_shapes = self.parameters['surface_shapes']
         wake_coords_names = [surface_name + '_wake_coords' for surface_name in surface_names]
         wake_coords_shapes = [(num_nodes, self.parameters['num_wake_pts'], surface_shape[2], 3) for surface_shape in surface_shapes]
@@ -236,9 +301,10 @@ class VLMFixedWakeSystem(csdl.Model):
         self.add(wake_aic_model, 'WakeSubAicBiotSavarts')
 
     def add_project_wake_aic_to_normal_direction(self):
+        # num_nodes = self.parameters['surface_shapes'][0][0]
         # project the wake aic to the normal direction
         input_var_shapes = self.compute_wake_aic_shape()
-        [(num_nodes, (nc-1)* (ns-1), (n_wake_pts_chord-1)* (ns-1), 3)]
+        # [(num_nodes, (nc-1)* (ns-1), (n_wake_pts_chord-1)* (ns-1), 3)]
         
         wake_aic_projected_model = Projection(
             input_var_names=['wake_aic'],
@@ -258,6 +324,8 @@ class VLMFixedWakeSystem(csdl.Model):
     
     def add_compute_lhs_matrix(self):
         # get the lhs A matrix
+        surface_shapes = self.parameters['surface_shapes']
+        num_nodes = surface_shapes[0][0]
         wake_aic_projection_shape = self.compute_wake_aic_shape()[0][:-1]
         M = self.declare_variable('wake_aic_projection', shape=wake_aic_projection_shape)
         M_mat = M*1.0
@@ -300,6 +368,8 @@ class VLMFixedWakeSystem(csdl.Model):
 if __name__ == "__main__":
     import csdl
     from python_csdl_backend import Simulator
+    from VAST.utils.generate_mesh import *
+
     # define mesh as the input to the model
     nc = 3
     ns = 11

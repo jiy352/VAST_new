@@ -77,7 +77,7 @@ class SubAicBiotSavarts(csdl.Model):
             aic_sub_reshaped = csdl.reshape(aic_sub, 
                             new_shape=(eval_pt_shape[0], eval_pt_shape[1]*eval_pt_shape[2], (vortex_coords_shape[1]-1)*(vortex_coords_shape[2]-1), 3))
             
-
+            print('the shape of aic_sub_reshaped is', aic_sub_reshaped.shape)
             self.register_output(output_name, aic_sub_reshaped)
 
 

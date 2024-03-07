@@ -69,7 +69,7 @@ def test_geometry_property_extraction(setup_mesh_to_vortex_mesh):
         bound_vtx_coords = sim[f'{surface_name}_bound_vtx_coords']
         
         # Extract the outputs from simulation
-        collocation_points = sim[f'{surface_name}_collocation_points']
+        collocation_points = sim[f'{surface_name}_collocation_pts']
         panel_areas = sim[f'{surface_name}_panel_areas']
         force_evaluation_pts = sim[f'{surface_name}_force_evaluation_pts']
 
